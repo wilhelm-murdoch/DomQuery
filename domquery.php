@@ -597,9 +597,9 @@ class DomQuery extends DOMDocument
 	{
 		$this->importNode($Content, true);
 
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			$this->Results->current()->parentNode->replaceChild($Content->cloneNode(true), $this->Results->current());
+			$Result->parentNode->replaceChild($Content->cloneNode(true), $Result);
 		}
 
 		return $this;
@@ -628,10 +628,7 @@ class DomQuery extends DOMDocument
 		{
 			$nodes[] = $Result->getAttributeNode($key);
 		}
-echo '<pre>';
-print_r($nodes);
-echo '</pre>';
-exit();
+
 		return $nodes;
 	}
 
@@ -651,9 +648,9 @@ exit();
 	*/
 	public function setAttr($key, $value)
 	{
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			$this->Results->current()->setAttribute($key, $value);
+			$Result->setAttribute($key, $value);
 		}
 
 		return $this;
@@ -674,11 +671,11 @@ exit();
 	*/
 	public function removeAttr($key)
 	{
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			if($this->Results->current()->hasAttributes() && $this->Results->current()->hasAttribute($key))
+			if($Result->hasAttributes() && $Result->hasAttribute($key))
 			{
-				$this->Results->current()->removeAttribute($key);
+				$Result->removeAttribute($key);
 			}
 		}
 
@@ -700,7 +697,7 @@ exit();
  * @link http://www.thedrunkenepic.com
  * @since Build 1.0.1 Alpha
  ***/
-class XPathResultIterator extends ArrayObject
+class XPathResultIterator implements Iterator, Countable
 {
    /**
 	* Holds the results of the latest XPath pattern.
@@ -731,8 +728,6 @@ class XPathResultIterator extends ArrayObject
 	*/
 	public function __construct(DOMNodeList &$DOMNodeList)
 	{
-		parent::__construct($DOMNodeList);
-
 		$this->DOMNodeList = &$DOMNodeList;
 		$this->position    = 0;
 	}
@@ -775,23 +770,6 @@ class XPathResultIterator extends ArrayObject
    // ! Executor Method
 
    /**
-	* Resets the internal pointer to the first position.
-	*
-	* @param None
-	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.1 Alpha
-	* @access Public
-	* @return Integer
-	*/
-	public function reset()
-	{
-		return $this->position = 0;
-	}
-
-
-   // ! Executor Method
-
-   /**
 	* Moves the internal pointer to the next result.
 	*
 	* @param None
@@ -819,7 +797,7 @@ class XPathResultIterator extends ArrayObject
 	*/
 	public function rewind()
 	{
-		return $this->position--;
+		return $this->position = 0;
 	}
 
 
@@ -878,27 +856,6 @@ class XPathResultIterator extends ArrayObject
 		}
 
 		return false;
-	}
-
-
-	public function offsetSet($offset, $value)
-	{
-
-	}
-
-	public function offsetExists($offset)
-	{
-		return is_null($this->DOMNodeList->item($offset)) ? false : true;
-	}
-
-	public function offsetUnset($offset)
-	{
-
-	}
-
-	public function offsetGet($offset)
-	{
-		return $this->DOMNodeList->item($offset);
 	}
 }
 

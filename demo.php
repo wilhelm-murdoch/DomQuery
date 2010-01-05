@@ -34,14 +34,13 @@ $Xml = new DomQuery;
 
 $Nodes = $Xml->load($original)
 	->path('//*[@test]')
-	->getAttr('test');
+	->setAttr('tests', 'blah');
 
 foreach($Nodes as $Node)
 {
-	echo get_class($Node);
+echo $Node->nodeValue;
 }
 
-exit();
 
 header('Content-Type: text/xml');
 
