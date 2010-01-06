@@ -1,6 +1,5 @@
 <?php
 
-
 /***
  * DomQuery
  *
@@ -12,9 +11,9 @@
  * @package DomQuery
  * @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
  * @license MIT License <http://www.opensource.org/licenses/mit-license.php>
- * @copyright Copyright (c) 2008, Daniel Wilhelm II Murdoch
+ * @copyright Copyright (c) 2010, Daniel Wilhelm II Murdoch
  * @link http://www.thedrunkenepic.com
- * @since Build 1.0.0 Alpha
+ * @version 1.2.0
  ***/
 class DomQuery extends DOMDocument
 {
@@ -31,10 +30,9 @@ class DomQuery extends DOMDocument
    /**
 	* Instantiates class and defines instance variables.
 	*
-	* @param String $version The version of the document.
+	* @param String $version  The version of the document.
 	* @param String $encoding The character encoding of the document.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Void
 	*/
@@ -57,7 +55,6 @@ class DomQuery extends DOMDocument
 	* @param String $method    The name of the method being called.
 	* @param Array  $arguments Any arguments passed through to this method.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Boolean
 	*/
@@ -78,7 +75,6 @@ class DomQuery extends DOMDocument
 	* @param String $method    The name of the method being called.
 	* @param Array  $arguments Any arguments passed through to this method.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Boolean
 	*/
@@ -101,7 +97,6 @@ class DomQuery extends DOMDocument
 	* @param String $source Source data to pass into the DOMDocument object.
 	* @param String $path   An XPath expression may be immediately executed after loading XML.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -131,11 +126,10 @@ class DomQuery extends DOMDocument
    /**
 	* Applies an XPath query to the current document.
 	*
-	* @param String $path xpath query to execute
-	* @param Boolean $return Return the result set rather than a self instance?
-	* @param Object $Context You may run an xpath query on a specific element.
+	* @param String  $path    XPath query to execute.
+	* @param Boolean $return  Return the result set rather than a self instance.
+	* @param Object  $Context You may run an xpath query on a specific element.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -182,7 +176,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param String | Array $callback The callback method or function to apply result elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -251,7 +244,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param String $function Content of the function to execute.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -307,7 +299,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param String $path The destination of the copied elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -332,7 +323,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param none
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -354,7 +344,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param none
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -376,7 +365,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param Object $Element The content to append.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -400,7 +388,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param String $path The destination path of all matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -425,7 +412,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param Object $Element The content to prepend.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -458,7 +444,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param String $path The destination path of all matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -492,7 +477,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param Object $Element The content to insert.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -519,7 +503,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param Object $Element The content to insert.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -546,7 +529,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param Object $Element The content to replace the matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -569,10 +551,9 @@ class DomQuery extends DOMDocument
 	* Attempts to retrieve the attribute matching the value of $key from all
 	* matched elements.
 	*
-	* @param String $key The name of the attribute
-	* @param String $value The value of the attribute
+	* @param String $key   The name of the attribute.
+	* @param String $value The value of the attribute.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -594,10 +575,9 @@ class DomQuery extends DOMDocument
    /**
 	* Adds an attribute/value set to all matched elements.
 	*
-	* @param String $key The name of the attribute
-	* @param String $value The value of the attribute
+	* @param String $key   The name of the attribute.
+	* @param String $value The value of the attribute.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -619,7 +599,6 @@ class DomQuery extends DOMDocument
 	*
 	* @param String $key The name of the attribute to remove.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -644,9 +623,10 @@ class DomQuery extends DOMDocument
 	* also replicate the merging document across all matched elements using
 	* the given XPath expression.
 	*
-	* @param String $source The XML source document
+	* @param String $source      The XML source document.
+	* @param String $path_origin XPath expression to locate elements to merge.
+	* @param String $path_destination The XML source document
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
@@ -691,9 +671,9 @@ class DomQuery extends DOMDocument
  * @package DomQuery
  * @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
  * @license MIT License <http://www.opensource.org/licenses/mit-license.php>
- * @copyright Copyright (c) 2008, Daniel Wilhelm II Murdoch
+ * @copyright Copyright (c) 2010, Daniel Wilhelm II Murdoch
  * @link http://www.thedrunkenepic.com
- * @since Build 1.0.1 Alpha
+ * @version 1.2.0
  ***/
 class XPathResultIterator implements Iterator, Countable
 {
@@ -718,7 +698,7 @@ class XPathResultIterator implements Iterator, Countable
    /**
 	* Instantiates class and defines instance variables.
 	*
-	* @param Object $DOMNodeList The result set of the last xpath query.
+	* @param Object $DOMNodeList The result set of the last XPath query.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.1 Alpha
 	* @access Public
