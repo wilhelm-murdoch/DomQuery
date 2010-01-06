@@ -1,5 +1,12 @@
 <?php
 
+// TODO: Add wrap method
+// TODO: SimpleXmlElement bug for results > 1
+
+define('SAVE_MODE_DOM',    1);
+define('SAVE_MODE_STRING', 2);
+define('SAVE_MODE_SIMPLE', 4);
+
 /***
  * DomQuery
  *
@@ -15,7 +22,7 @@
  * @link http://www.thedrunkenepic.com
  * @version 1.2.0
  ***/
-class DomQuery extends DOMDocument
+class DomQuery extends DOMDocument implements Countable
 {
    /**
 	* Holds the results of the latest XPath pattern.
@@ -94,8 +101,9 @@ class DomQuery extends DOMDocument
    /**
 	* Loads source data into the DOMDocument object.
 	*
-	* @param String $source Source data to pass into the DOMDocument object.
-	* @param String $path   An XPath expression may be immediately executed after loading XML.
+	* @param String  $source Source data to pass into the DOMDocument object.
+	* @param String  $path   An XPath expression may be immediately executed after loading XML.
+	* @param Boolean $return Return the result set rather than a self instance.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @access Public
 	* @return Object
@@ -124,11 +132,86 @@ class DomQuery extends DOMDocument
    // ! Executor Method
 
    /**
+	* Takes the current result set of the latest XPath expression and returns an entirely new
+	* XML document containing said results. May also use a previously returned instance of
+	* XPathResultIterator to create the document.
+	*
+	* @param Integer $mode                Determines the mode in which to save the output (SAVE_MODE_DOM | SAVE_MODE_SIMPLE | SAVE_MODE_STRING).
+	* @param Object  $XPathResultIterator Optional instance of XPathResultIterator.
+	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
+	* @access Public
+	* @return Mixed
+	*/
+	public function save($mode = SAVE_MODE_STRING, XPathResultIterator $XPathResultIterator = null)
+	{
+		$Dom = new parent;
+
+		$Dom->preserveWhiteSpace = false;
+		$Dom->formatOutput       = true;
+
+		$Results = is_null($XPathResultIterator) ? $this->Results : $XPathResultIterator;
+
+		foreach($Results as $Result)
+		{
+			$Result = $Dom->importNode($Result, true);
+
+			$Dom->appendChild($Result->cloneNode(true));
+		}
+
+		switch($mode)
+		{
+			case SAVE_MODE_DOM:
+
+				return $Dom;
+
+				break;
+
+			case SAVE_MODE_SIMPLE:
+
+				if(count($Results) > 1)
+				{
+
+				}
+
+				return new SimpleXmlElement($Dom->saveXml());
+
+				break;
+
+			default:
+			case SAVE_MODE_STRING:
+
+				return $Dom->saveXml();
+
+				break;
+		}
+	}
+
+
+   // ! Executor Method
+
+   /**
+	* Simply returns the number of matched results from the last XPath query. May also
+	* use a previously returned instance of XPathResultIterator.
+	*
+	* @param Object $XPathResultIterator Optional instance of XPathResultIterator.
+	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
+	* @access Public
+	* @return Integer
+	*/
+	public function count(XPathResultIterator $XPathResultIterator = null)
+	{
+		return count(is_null($XPathResultIterator) ? $this->Results : $XPathResultIterator);
+	}
+
+
+   // ! Executor Method
+
+   /**
 	* Applies an XPath query to the current document.
 	*
 	* @param String  $path    XPath query to execute.
 	* @param Boolean $return  Return the result set rather than a self instance.
-	* @param Object  $Context You may run an xpath query on a specific element.
+	* @param Object  $Context You may run an XPath query on a specific element.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @access Public
 	* @return Object
@@ -632,7 +715,7 @@ class DomQuery extends DOMDocument
 	*/
 	public function merge($source, $path_origin, $path_destination)
 	{
-		$Dom = new self;
+		$Dom = new parent;
 
 		if(false == $Dom->loadXml($source))
 		{
@@ -675,7 +758,7 @@ class DomQuery extends DOMDocument
  * @link http://www.thedrunkenepic.com
  * @version 1.2.0
  ***/
-class XPathResultIterator implements Iterator, Countable
+class XPathResultIterator implements Iterator, ArrayAccess, Countable
 {
    /**
 	* Holds the results of the latest XPath pattern.
@@ -834,6 +917,26 @@ class XPathResultIterator implements Iterator, Countable
 		}
 
 		return false;
+	}
+
+	public function offsetSet($offset, $value)
+	{
+		return null;
+	}
+
+	public function offsetExists($offset)
+	{
+		return false == is_null($this->DOMNodeList->item($offset));
+	}
+
+	public function offsetUnset($offset)
+	{
+		unset($this->container[$offset]);
+	}
+
+	public function offsetGet($offset)
+	{
+		return $this->offsetExists($offset) ? $this->DOMNodeList->item($offset) : null;
 	}
 }
 

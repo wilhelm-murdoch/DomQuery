@@ -6,9 +6,20 @@ ob_start();
 
 ?>
 <root>
-	<element>
-		<child>This is a child ...</child>
-	</element>
+	<books total="3">
+		<book id="1">
+			<title>The God Delusion</title>
+			<author>Richard Dawkins</author>
+		</book>
+		<book id="2">
+			<title>Brave New World</title>
+			<author>Aldous Huxley</author>
+		</book>
+		<book id="3">
+			<title>1984</title>
+			<author>George Orwell</author>
+		</book>
+	</books>
 </root>
 <?php
 
@@ -16,24 +27,7 @@ $original = ob_get_contents();
 
 ob_end_clean();
 
-ob_start();
-
-?>
-<root>
-	<test><foo>test</foo></test>
-	<omg>wow</omg>
-</root>
-<?php
-
-$new = ob_get_contents();
-
-ob_end_clean();
 
 $Xml = new DomQuery;
 
-$Xml->load($original)->merge($new, '//test', '//element');
-
-
-header('Content-Type: text/xml');
-
-die($Xml->saveXml());
+print_r($Xml->load($original)->path('//*/book')->save(SAVE_MODE_SIMPLE));
