@@ -382,7 +382,7 @@ class DomQuery extends DOMDocument
 	*/
 	public function append(DOMElement $Element)
 	{
-		$this->importNode($Element, true);
+		$Element = $this->importNode($Element, true);
 
 		foreach($this->Results as $Result)
 		{
@@ -431,7 +431,7 @@ class DomQuery extends DOMDocument
 	*/
 	public function prepend(DOMElement $Element)
 	{
-		$this->importNode($Element, true);
+		$Element = $this->importNode($Element, true);
 
 		foreach($this->Results as $Result)
 		{
@@ -498,7 +498,7 @@ class DomQuery extends DOMDocument
 	*/
 	public function before(DOMElement $Element)
 	{
-		$this->importNode($Element, true);
+		$Element = $this->importNode($Element, true);
 
 		foreach($this->Results as $Result)
 		{
@@ -525,7 +525,7 @@ class DomQuery extends DOMDocument
 	*/
 	public function after(DOMElement $Element)
 	{
-		$this->importNode($Element, true);
+		$Element = $this->importNode($Element, true);
 
 		foreach($this->Results as $Result)
 		{
@@ -552,7 +552,7 @@ class DomQuery extends DOMDocument
 	*/
 	public function replace(DOMElement $Element)
 	{
-		$this->importNode($Element, true);
+		$Element = $this->importNode($Element, true);
 
 		foreach($this->Results as $Result)
 		{
@@ -669,7 +669,7 @@ class DomQuery extends DOMDocument
 				{
 					if(false == in_array($Destination->nodeName, array('#text', '#document')))
 					{
-						$this->importNode($Origin, true);
+						$Origin = $this->importNode($Origin, true);
 
 						$Destination->appendChild($Origin->cloneNode(true));
 					}
