@@ -1,28 +1,14 @@
 <?php
 
-// More demos to come, this is just a place holder. :)
-
 require_once 'domquery.php';
 
 ob_start();
 
 ?>
 <root>
-	<item>Item One</item>
-	<item>Item Two</item>
-	<item test="omg">Item Three</item>
-	<item>Item Four</item>
-	<item>Item Five</item>
-	<parent>
-		<child>omg</child>
-		<child>
-			<test/>
-		</child>
-		<child test="hai">omg</child>
-	</parent>
-	<copy>
-		<default/>
-	</copy>
+	<element>
+		<child>This is a child ...</child>
+	</element>
 </root>
 <?php
 
@@ -30,16 +16,22 @@ $original = ob_get_contents();
 
 ob_end_clean();
 
+ob_start();
+
+?>
+<root>
+	<test><foo>test</foo></test>
+	<omg>wow</omg>
+</root>
+<?php
+
+$new = ob_get_contents();
+
+ob_end_clean();
+
 $Xml = new DomQuery;
 
-$Nodes = $Xml->load($original)
-	->path('//*[@test]')
-	->setAttr('tests', 'blah');
-
-foreach($Nodes as $Node)
-{
-echo $Node->nodeValue;
-}
+$Xml->load($original)->merge($new, '//test', '//element');
 
 
 header('Content-Type: text/xml');

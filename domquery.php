@@ -1,7 +1,5 @@
 <?php
 
-// TODO: Allow sub-xpath expressions for all methods
-// TODO: Implement exception handling in all methods
 
 /***
  * DomQuery
@@ -25,15 +23,7 @@ class DomQuery extends DOMDocument
 	* @access Public
 	* @var Object
 	*/
-	public $Results;
-
-
-   /**
-	* The type of document currently loaded.
-	* @access Public
-	* @var String
-	*/
-	public $type;
+	private $Results;
 
 
    // ! Constructor Method
@@ -52,8 +42,54 @@ class DomQuery extends DOMDocument
 	{
 		parent::__construct($version, $encoding);
 
+		$this->preserveWhiteSpace = false;
+		$this->formatOutput       = true;
+
 		$this->Results = array();
-		$this->type    = 'xml';
+	}
+
+
+   // ! Executor Method
+
+   /**
+	* Magic method used to throw a catchable exception when calling a non-existant method.
+	*
+	* @param String $method    The name of the method being called.
+	* @param Array  $arguments Any arguments passed through to this method.
+	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
+	* @since Build 1.0.0 Alpha
+	* @access Public
+	* @return Boolean
+	*/
+	public function __call($method, $arguments)
+	{
+		throw new DOMException("Method `DomQuery::{$method}()` does not exist.");
+
+		return false;
+	}
+
+
+   // ! Executor Method
+
+   /**
+	* Magic method used to access private properties. This allows users to fetch, but not modify,
+	* private properties.
+	*
+	* @param String $method    The name of the method being called.
+	* @param Array  $arguments Any arguments passed through to this method.
+	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
+	* @since Build 1.0.0 Alpha
+	* @access Public
+	* @return Boolean
+	*/
+	public function __get($property)
+	{
+		if(false == isset($this->$property))
+		{
+			throw new DOMException("Property `DomQuery::\${$property}` does not exist.");
+		}
+
+		return $this->$property;
 	}
 
 
@@ -61,54 +97,29 @@ class DomQuery extends DOMDocument
 
    /**
 	* Loads source data into the DOMDocument object.
-	* Chainable
 	*
-	* @param String $source Source data to pass into the DOMDocument object
-	* @param String $type The type of source data being passed (xml|html|file)
+	* @param String $source Source data to pass into the DOMDocument object.
+	* @param String $path   An XPath expression may be immediately executed after loading XML.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
-	public function load($source, $type = 'xml')
+	public function load($source, $path = null, $return = false)
 	{
-		// TODO: Make be a bit more elegant and intelligent:
-
-		try
+		if(false == $this->loadXml($source))
 		{
-			switch($type)
-			{
-				default:
-				case 'xml':
-
-					$this->loadXml($source);
-					$this->type = 'xml';
-
-					break;
-
-				case 'html':
-
-					$this->loadHtml($source);
-					$this->type = 'html';
-
-					break;
-
-				case 'file':
-
-					if(false == file_exists($source))
-					{
-						throw new DomQueryException('The file you requsted could not be found.');
-					}
-
-					$this->loadHtmlFile($source);
-					$this->type = 'html';
-
-					break;
-			}
+			throw new DOMException('XML source could not be loaded into the DOM.');
 		}
-		catch(DomQueryException $Exception)
+
+		if(false == is_null($path))
 		{
-			die("<strong>Exception Caught:</strong> " . $Exception->getMessage());
+			$this->Results = $this->path($path, true);
+
+			if($return)
+			{
+				return $this->Results;
+			}
 		}
 
 		return $this;
@@ -118,26 +129,7 @@ class DomQuery extends DOMDocument
    // ! Executor Method
 
    /**
-	* Saves the currently loaded document with any applied changes.
-	* Chainable
-	*
-	* @param none
-	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
-	* @since Build 1.0.0 Alpha
-	* @access Public
-	* @return Current Instance
-	*/
-	public function save()
-	{
-		// TODO: Implement this functionality
-	}
-
-
-   // ! Executor Method
-
-   /**
 	* Applies an XPath query to the current document.
-	* Chainable
 	*
 	* @param String $path xpath query to execute
 	* @param Boolean $return Return the result set rather than a self instance?
@@ -153,20 +145,10 @@ class DomQuery extends DOMDocument
 
 		if($Context instanceof DOMNode)
 		{
-			if($return)
-			{
-				return new XPathResultIterator($XPath->query($path, $Context));
-			}
-
 			$this->Results = new XPathResultIterator($XPath->query($path, $Context));
 		}
 		else
 		{
-			if($return)
-			{
-				return new XPathResultIterator($XPath->query($path));
-			}
-
 			$this->Results = new XPathResultIterator($XPath->query($path));
 		}
 
@@ -198,8 +180,6 @@ class DomQuery extends DOMDocument
 	*
 	* walk(array('class_name', 'method_to_execute'));
 	*
-	* Chainable
-	*
 	* @param String | Array $callback The callback method or function to apply result elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
@@ -208,50 +188,43 @@ class DomQuery extends DOMDocument
 	*/
 	public function walk($callback)
 	{
-		try
+		$arguments = func_get_args();
+
+		array_shift($arguments);
+
+		foreach($this->Results as $Result)
 		{
-			$arguments = func_get_args();
+			if(is_array($callback) && sizeof($callback) == 2)
+			{
+				if(false == class_exists($callback[0]))
+				{
+					throw new DOMException("Class `{$callback[0]}` does not exist.");
+				}
+				else if(false == method_exists($callback[0], $callback[1]))
+				{
+					throw new DOMException("Method `{$callback[0]}::{$callback[1]}()` does not exist.");
+				}
+				else if(false == is_callable($callback))
+				{
+					throw new DOMException("Method `{$callback[0]}::{$callback[1]}()` is not callable.");
+				}
+			}
+			else if(false == function_exists($callback))
+			{
+				throw new DOMException("Function `{$callback}()` does not exist.");
+			}
+
+			array_unshift($arguments, array
+			(
+				'results'  => &$this->Results,
+				'element'  => $Result,
+				'position' => $this->Results->key(),
+				'context'  => &$this
+			));
+
+			call_user_func_array($callback, $arguments);
 
 			array_shift($arguments);
-
-			for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
-			{
-				if(is_array($callback) && sizeof($callback) == 2)
-				{
-					if(false == class_exists($callback[0]))
-					{
-						throw new DomQueryException('object does not exist');
-					}
-					else if(false == method_exists($callback[0], $callback[1]))
-					{
-						throw new DomQueryException('method does not exist');
-					}
-					else if(false == is_callable($callback))
-					{
-						throw new DomQueryException('method is not callable');
-					}
-				}
-				else if(false == function_exists($callback))
-				{
-					throw new DomQueryException('function does not exist');
-				}
-
-				array_unshift($arguments, array
-				(
-					'results'  => &$this->Results,
-					'element'  => $this->Results->current(),
-					'position' => $this->Results->position(),
-					'context'  => &$this
-				));
-
-				call_user_func_array($callback, $arguments);
-
-				array_shift($arguments);
-			}
-		}
-		catch(DomQueryException $Exception)
-		{
-			die("<strong>Exception Caught:</strong> " . $Exception->getMessage());
 		}
 
 		return $this;
@@ -275,8 +248,6 @@ class DomQuery extends DOMDocument
 	* The arguments valued 'foo' and 'bar' will be accessed within the lambda function
 	* as '$param1' and '$param2' respectively. This may change in future versions or
 	* when PHP 5.3.x is more widely-used.
-	*
-	* Chainable
 	*
 	* @param String $function Content of the function to execute.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -308,13 +279,13 @@ class DomQuery extends DOMDocument
 		// Now we iterate through the nodes our last XPath pattern discoverd
 		// and apply the runtime-created lambda function to each one:
 
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
 			array_unshift($arguments, array
 			(
 				'results'  => &$this->Results,
-				'element'  => $this->Results->current(),
-				'position' => $this->Results->position(),
+				'element'  => $Result,
+				'position' => $this->Results->key(),
 				'context'  => &$this
 			));
 
@@ -333,7 +304,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Copies the elements of the last xpath result to all results of $path.
-	* Chainable
 	*
 	* @param String $path The destination of the copied elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -341,13 +311,13 @@ class DomQuery extends DOMDocument
 	* @access Public
 	* @return Object
 	*/
-	public function replicate($path)
+	public function copy($path)
 	{
-		for($Destination = $this->path($path, true); $Destination->valid(); $Destination->next())
+		foreach($this->page($path, true) as $Destination)
 		{
-			for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+			foreach($this->Results as $Result)
 			{
-				$Destination->current()->appendChild($this->Results->current()->cloneNode(true));
+				$Destination->appendChild($Result->cloneNode(true));
 			}
 		}
 
@@ -359,7 +329,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Clears the contents of all matched elements.
-	* Chainable
 	*
 	* @param none
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -369,11 +338,9 @@ class DomQuery extends DOMDocument
 	*/
 	public function clear()
 	{
-		// TODO: Make sure nested elements are removed as well
-
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			$this->Results->current()->nodeValue = '';
+			$Result->nodeValue = '';
 		}
 
 		return $this;
@@ -384,7 +351,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Completely removes all matched elements.
-	* Chainable
 	*
 	* @param none
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -394,9 +360,9 @@ class DomQuery extends DOMDocument
 	*/
 	public function remove()
 	{
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			$this->Results->current()->parentNode->removeChild($this->Results->current());
+			$Result->parentNode->removeChild($Result);
 		}
 
 		return $this;
@@ -407,21 +373,20 @@ class DomQuery extends DOMDocument
 
    /**
 	* Append content to the inside of every matched element.
-	* Chainable
 	*
-	* @param Object $Content The content to append.
+	* @param Object $Element The content to append.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
-	public function append($Content)
+	public function append(DOMElement $Element)
 	{
-		$this->importNode($Content, true);
+		$this->importNode($Element, true);
 
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			$this->Results->current()->appendChild($Content->cloneNode(true));
+			$Result->appendChild($Element->cloneNode(true));
 		}
 
 		return $this;
@@ -432,7 +397,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Append all of the matched elements to another, specified, set of elements.
-	* Chainable
 	*
 	* @param String $path The destination path of all matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -442,11 +406,11 @@ class DomQuery extends DOMDocument
 	*/
 	public function appendTo($path)
 	{
-		for($Destination = $this->path($path, true); $Destination->valid(); $Destination->next())
+		foreach($this->path($path, true) as $Destination)
 		{
-			for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+			foreach($this->Results as $Result)
 			{
-				$Destination->current()->appendChild($this->Results->current()->cloneNode(true));
+				$Destination->appendChild($Result->cloneNode(true));
 			}
 		}
 
@@ -458,31 +422,28 @@ class DomQuery extends DOMDocument
 
    /**
 	* Prepend content to the inside of every matched element.
-	* Chainable
 	*
-	* @param Object $Content The content to prepend.
+	* @param Object $Element The content to prepend.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
-	public function prepend($Content)
+	public function prepend(DOMElement $Element)
 	{
-		// TODO: Take normal text or CDATA into account.
+		$this->importNode($Element, true);
 
-		$this->importNode($Content, true);
-
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			$FirstElement = $this->path('*[1]', true, $this->Results->current())->item(0);
+			$FirstElement = $this->path('*[1]', true, $Result)->item(0);
 
 			if($FirstElement instanceof DOMElement)
 			{
-				$this->Results->current()->insertBefore($Content->cloneNode(true), $FirstElement);
+				$Result->insertBefore($Element->cloneNode(true), $FirstElement);
 			}
 			else
 			{
-				$this->Results->current()->parentNode->insertBefore($Content->cloneNode(true), $this->Results->current());
+				$Result->parentNode->insertBefore($Element->cloneNode(true), $Result);
 			}
 		}
 
@@ -494,7 +455,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Prepend all of the matched elements to another, specified, set of elements.
-	* Chainable
 	*
 	* @param String $path The destination path of all matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -504,19 +464,19 @@ class DomQuery extends DOMDocument
 	*/
 	public function prependTo($path)
 	{
-		for($Destination = $this->path($path, true); $Destination->valid(); $Destination->next())
+		foreach($this->page($path, true) as $Destination)
 		{
-			for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+			foreach($this->Results as $Result)
 			{
-				$FirstElement = $this->path('*[1]', true, $Destination->current())->item(0);
+				$FirstElement = $this->path('*[1]', true, $Destination)->item(0);
 
 				if($FirstElement instanceof DOMElement)
 				{
-					$Destination->current()->insertBefore($this->Results->current()->cloneNode(true), $FirstElement);
+					$Destination->insertBefore($Result->cloneNode(true), $FirstElement);
 				}
 				else
 				{
-					$Destination->current()->parentNode->insertBefore($this->Results->current()->cloneNode(true), $Destination->current());
+					$Destination->parentNode->insertBefore($Result->cloneNode(true), $Destination);
 				}
 			}
 		}
@@ -529,23 +489,22 @@ class DomQuery extends DOMDocument
 
    /**
 	* Insert content before each of the matched elements.
-	* Chainable
 	*
-	* @param Object $Content The content to insert.
+	* @param Object $Element The content to insert.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
-	public function before($Content)
+	public function before(DOMElement $Element)
 	{
-		$this->importNode($Content, true);
+		$this->importNode($Element, true);
 
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			if($this->Results->current()->parentNode->nodeName != '#document')
+			if($Result->parentNode->nodeName != '#document')
 			{
-				$this->Results->current()->parentNode->insertBefore($Content->cloneNode(true), $this->Results->current());
+				$Result->parentNode->insertBefore($Element->cloneNode(true), $Result);
 			}
 		}
 
@@ -557,23 +516,22 @@ class DomQuery extends DOMDocument
 
    /**
 	* Insert content after each of the matched elements.
-	* Chainable
 	*
-	* @param Object $Content The content to insert.
+	* @param Object $Element The content to insert.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
-	public function after($Content)
+	public function after(DOMElement $Element)
 	{
-		$this->importNode($Content, true);
+		$this->importNode($Element, true);
 
-		for($this->Results->reset(); $this->Results->valid(); $this->Results->next())
+		foreach($this->Results as $Result)
 		{
-			if($this->Results->current()->parentNode->nodeName != '#document' && $this->Results->current()->nextSibling)
+			if($Result->parentNode->nodeName != '#docment' && $Result->nextSibling)
 			{
-				$this->Results->current()->parentNode->insertBefore($Content->cloneNode(true), $this->Results->current()->nextSibling);
+				$Result->parentNode->insertBefore($Element->cloneNode(true), $Result->nextSibling);
 			}
 		}
 
@@ -584,22 +542,21 @@ class DomQuery extends DOMDocument
    // ! Executor Method
 
    /**
-	* Replaces all matched elements with the value of $Content.
-	* Chainable
+	* Replaces all matched elements with the value of $Element.
 	*
-	* @param Object $Content The content to replace the matched elements.
+	* @param Object $Element The content to replace the matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.0 Alpha
 	* @access Public
 	* @return Object
 	*/
-	public function replace($Content)
+	public function replace(DOMElement $Element)
 	{
-		$this->importNode($Content, true);
+		$this->importNode($Element, true);
 
 		foreach($this->Results as $Result)
 		{
-			$Result->parentNode->replaceChild($Content->cloneNode(true), $Result);
+			$Result->parentNode->replaceChild($Element->cloneNode(true), $Result);
 		}
 
 		return $this;
@@ -611,7 +568,6 @@ class DomQuery extends DOMDocument
    /**
 	* Attempts to retrieve the attribute matching the value of $key from all
 	* matched elements.
-	* Chainable
 	*
 	* @param String $key The name of the attribute
 	* @param String $value The value of the attribute
@@ -637,7 +593,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Adds an attribute/value set to all matched elements.
-	* Chainable
 	*
 	* @param String $key The name of the attribute
 	* @param String $value The value of the attribute
@@ -661,7 +616,6 @@ class DomQuery extends DOMDocument
 
    /**
 	* Removes a specified attribute from all matched elements.
-	* Chainable
 	*
 	* @param String $key The name of the attribute to remove.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -676,6 +630,50 @@ class DomQuery extends DOMDocument
 			if($Result->hasAttributes() && $Result->hasAttribute($key))
 			{
 				$Result->removeAttribute($key);
+			}
+		}
+
+		return $this;
+	}
+
+
+   // ! Executor Method
+
+   /**
+	* Merges another XML document with the current one. Optionally, it will
+	* also replicate the merging document across all matched elements using
+	* the given XPath expression.
+	*
+	* @param String $source The XML source document
+	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
+	* @since Build 1.0.0 Alpha
+	* @access Public
+	* @return Object
+	*/
+	public function merge($source, $path_origin, $path_destination)
+	{
+		$Dom = new self;
+
+		if(false == $Dom->loadXml($source))
+		{
+			throw new DOMException('XML source could not be loaded into the DOM.');
+		}
+
+		$XPath = new DOMXPath($Dom);
+
+		foreach($this->path($path_destination, true) as $Destination)
+		{
+			if(false == in_array($Destination->nodeName, array('#text', '#document')))
+			{
+				foreach($XPath->query($path_origin) as $Origin)
+				{
+					if(false == in_array($Destination->nodeName, array('#text', '#document')))
+					{
+						$this->importNode($Origin, true);
+
+						$Destination->appendChild($Origin->cloneNode(true));
+					}
+				}
 			}
 		}
 
@@ -858,8 +856,5 @@ class XPathResultIterator implements Iterator, Countable
 		return false;
 	}
 }
-
-
-class DomQueryException extends Exception { }
 
 /* End of file domquery.php */
