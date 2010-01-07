@@ -27,7 +27,13 @@ $original = ob_get_contents();
 
 ob_end_clean();
 
+try
+{
+	$DomQuery = new DomQuery;
 
-$Xml = new DomQuery;
-
-print_r($Xml->load($original)->path('//*/book')->save(SAVE_MODE_SIMPLE));
+	print_r($DomQuery->load($original, '//book[@id = 2]')->prepend($DomQuery->createElement('omg', print_r($DomQuery, true)))->save(SAVE_MODE_S, $DomQuery));
+}
+catch(DOMException $Exception)
+{
+	echo $Exception->getMessage();
+}

@@ -1,8 +1,5 @@
 <?php
 
-// TODO: Add wrap method
-// TODO: SimpleXmlElement bug for results > 1
-
 define('SAVE_MODE_DOM',    1);
 define('SAVE_MODE_STRING', 2);
 define('SAVE_MODE_SIMPLE', 4);
@@ -25,7 +22,7 @@ define('SAVE_MODE_SIMPLE', 4);
 class DomQuery extends DOMDocument implements Countable
 {
    /**
-	* Holds the results of the latest XPath pattern.
+	* Holds the results of the latest XPath expression.
 	* @access Public
 	* @var Object
 	*/
@@ -58,6 +55,19 @@ class DomQuery extends DOMDocument implements Countable
 
    /**
 	* Magic method used to throw a catchable exception when calling a non-existant method.
+	*
+	* <usage>
+	*     try
+	*     {
+	*         $DomQuery = new DomQuery;
+	*
+	*         $DomQuery->i_do_not_exist();
+	*     }
+	*     catch(DOMException $Exception)
+	*     {
+	*         echo $Exception->getMessage();
+	*     }
+	* </usage>
 	*
 	* @param String $method    The name of the method being called.
 	* @param Array  $arguments Any arguments passed through to this method.
@@ -99,7 +109,44 @@ class DomQuery extends DOMDocument implements Countable
    // ! Executor Method
 
    /**
-	* Loads source data into the DOMDocument object.
+	* Returns the contents of the DOM as an XML string.
+	*
+	* <usage>
+	*     $DomQuery = new DomQuery;
+	*
+	*     echo $DomQuery->load('<root><foo>foo</foo></root>');
+	* </usage>
+	*
+	* @param None
+	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
+	* @access Public
+	* @return String
+	*/
+	public function __toString()
+	{
+		return $this->saveXml();
+	}
+
+
+   // ! Executor Method
+
+   /**
+	* Loads source data into the DOMDocument object. You may optionally specify an initial XPath
+	* expression to apply to the source. If you set $return to TRUE, it will return an instance
+	* of XPathResultIterator which will contain the results of the applied expression.
+	*
+	* <usage>
+	*     try
+	*     {
+	*         $DomQuery = new DomQuery;
+	*
+	*         $DomQuery->load('<root><foo>foo</foo></root>', '//root/foo');
+	*     }
+	*     catch(DOMException $Exception)
+	*     {
+	*         echo $Exception->getMessage();
+	*     }
+	* </usage>
 	*
 	* @param String  $source Source data to pass into the DOMDocument object.
 	* @param String  $path   An XPath expression may be immediately executed after loading XML.
@@ -134,7 +181,24 @@ class DomQuery extends DOMDocument implements Countable
    /**
 	* Takes the current result set of the latest XPath expression and returns an entirely new
 	* XML document containing said results. May also use a previously returned instance of
-	* XPathResultIterator to create the document.
+	* XPathResultIterator to create the document. Depending one which constant you use, this
+	* method can return the results as an XML string, DOMDocument instance or an array containing
+	* instances of PHP's SimpleXmlElement class.
+	*
+	* <usage>
+	*     $DomQuery = new DomQuery;
+	*
+	*     $DomQuery->load('<root><foo>foo</foo></root>');
+	*
+	*     $xml_string = $DomQuery->save(SAVE_MODE_STRING);
+	*
+	*     $DOMDocument = $DomQuery->save(SAVE_MODE_DOM);
+	*
+	*     foreach($DomQuery->save(SAVE_MODE_DOM) as $Xml)
+	*     {
+	*         echo $Xml->root->foo;
+	*     }
+	* </usage>
 	*
 	* @param Integer $mode                Determines the mode in which to save the output (SAVE_MODE_DOM | SAVE_MODE_SIMPLE | SAVE_MODE_STRING).
 	* @param Object  $XPathResultIterator Optional instance of XPathResultIterator.
@@ -142,20 +206,41 @@ class DomQuery extends DOMDocument implements Countable
 	* @access Public
 	* @return Mixed
 	*/
-	public function save($mode = SAVE_MODE_STRING, XPathResultIterator $XPathResultIterator = null)
+	public function save($mode = SAVE_MODE_STRING, &$Context = null)
 	{
-		$Dom = new parent;
+		$Dom = new parent($this->version, $this->encoding);
 
 		$Dom->preserveWhiteSpace = false;
 		$Dom->formatOutput       = true;
 
-		$Results = is_null($XPathResultIterator) ? $this->Results : $XPathResultIterator;
-
-		foreach($Results as $Result)
+		if(is_object($Context))
 		{
-			$Result = $Dom->importNode($Result, true);
+			if($Context instanceof XPathResultIterator)
+			{
+				foreach($Context as $Result)
+				{
+					$Result = $Dom->importNode($Result, true);
 
-			$Dom->appendChild($Result->cloneNode(true));
+					$Dom->appendChild($Result->cloneNode(true));
+				}
+			}
+			else if($Context instanceof DOMDocument)
+			{
+				$Dom = &$Context;
+			}
+			else
+			{
+				throw new DOMException('Object `' . get_class($Context) . '` is not supported.');
+			}
+		}
+		else
+		{
+			foreach($this->Results as $Result)
+			{
+				$Result = $Dom->importNode($Result, true);
+
+				$Dom->appendChild($Result->cloneNode(true));
+			}
 		}
 
 		switch($mode)
@@ -168,12 +253,27 @@ class DomQuery extends DOMDocument implements Countable
 
 			case SAVE_MODE_SIMPLE:
 
-				if(count($Results) > 1)
-				{
+				$Results = $Context instanceof XPathResultIterator ? $Context : $this->Results;
 
+				if(count($Results) == 1 || $Context instanceof DOMDocument)
+				{
+					return array(new SimpleXmlElement($Dom->saveXml()));
 				}
 
-				return new SimpleXmlElement($Dom->saveXml());
+				$return = array();
+
+				foreach($Results as $Result)
+				{
+					$Dom = new parent($this->version, $this->encoding);
+
+					$Dom->appendChild($Dom->importNode($Result, true));
+
+					$return[] = new SimpleXmlElement($Dom->saveXml());
+
+					unset($Dom);
+				}
+
+				return $return;
 
 				break;
 
@@ -193,6 +293,18 @@ class DomQuery extends DOMDocument implements Countable
 	* Simply returns the number of matched results from the last XPath query. May also
 	* use a previously returned instance of XPathResultIterator.
 	*
+	* <usage>
+	*     $DomQuery = new DomQuery;
+	*
+	*     echo $DomQuery->load('<root><foo>foo</foo></root>', '//root')->count();
+	*
+	*     echo $DomQuery->count();
+	*
+	*     echo count($DomQuery);
+	*
+	*     echo count($XPathResultIterator);
+	* </usage>
+	*
 	* @param Object $XPathResultIterator Optional instance of XPathResultIterator.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @access Public
@@ -207,7 +319,19 @@ class DomQuery extends DOMDocument implements Countable
    // ! Executor Method
 
    /**
-	* Applies an XPath query to the current document.
+	* Applies an XPath query to the current document. If $return is set to TRUE, this method
+	* will return an instance of XPathResultIterator containing the results. You may also
+	* run an XPath expression on an existing DOMNode instance.
+	*
+	* <usage>
+	*     $DomQuery = new DomQuery;
+	*
+	*     $DomQuery->load('<root><foo>foo</foo></root>');
+	*
+	*     $DomQuery->path('//root/foo');
+	*
+	*     $XPathResultIterator = $DomQuery->path('//root/foo', true);
+	* </usage>
 	*
 	* @param String  $path    XPath query to execute.
 	* @param Boolean $return  Return the result set rather than a self instance.
@@ -220,19 +344,24 @@ class DomQuery extends DOMDocument implements Countable
 	{
 		$XPath = new DOMXPath($this);
 
-		if($Context instanceof DOMNode)
+		if($Context)
 		{
+			if($return)
+			{
+				return new XPathResultIterator($XPath->query($path, $Context));
+			}
+
 			$this->Results = new XPathResultIterator($XPath->query($path, $Context));
-		}
-		else
-		{
-			$this->Results = new XPathResultIterator($XPath->query($path));
+
+			return $this;
 		}
 
 		if($return)
 		{
-			return $this->Results;
+			return new XPathResultIterator($XPath->query($path));
 		}
+
+		$this->Results = new XPathResultIterator($XPath->query($path));
 
 		return $this;
 	}
@@ -249,13 +378,32 @@ class DomQuery extends DOMDocument implements Countable
 	* is an array that contains the current document, current element and
 	* complete result set of the last xpath query all by reference.
 	*
-	* Function:
+	* The first parameter passed to the callback will be an array containing
+	* the following values:
 	*
-	* walk('function_to_execute');
+	* <code>
+	* array
+	* (
+	*     'results'  => &$this->Results,       // The current result set of the last XPath expression
+	*     'element'  => $Result,               // The currently iterated element
+	*     'position' => $this->Results->key(), // The currently itereted element's position within the result set
+	*     'context'  => &$this                 // Instance of DomQuery
+	* )
+	* </code>
 	*
-	* Method:
+	* All of the following examples are acceptable.
 	*
-	* walk(array('class_name', 'method_to_execute'));
+	* <usage>
+	*     $DomQuery = new DomQuery;
+	*
+	*     $DomQuery->load('<root><foo>foo</foo></root>');
+	*
+	*     $DomQuery->walk('my_function', 'arg_one', 'arg_two');
+	*
+	*     $DomQuery->walk(array('my_static_class', 'my_static_method'), 'arg_one', 'arg_two');
+	*
+	*     $DomQuery->walk(array($Instance, 'my_method'), 'arg_one', 'arg_two');
+	* </usage>
 	*
 	* @param String | Array $callback The callback method or function to apply result elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
@@ -315,11 +463,32 @@ class DomQuery extends DOMDocument implements Countable
 	* function. Unlike 'walk', though, you cannot currently name them. This method
 	* names them for you using a generic convention.
 	*
-	* For example:
+	* The first parameter passed to the callback will be an array containing
+	* the following values:
 	*
-	* $Xml->load($output)
-	*     ->path('//items/*')
-	*     ->each($lambda, 'foo', 'bar');
+	* <code>
+	* array
+	* (
+	*     'results'  => &$this->Results,       // Reference of the current result set of the last XPath expression
+	*     'element'  => $Result,               // The currently iterated element
+	*     'position' => $this->Results->key(), // The currently itereted element's position within the result set
+	*     'context'  => &$this                 // Reference of DomQuery instance
+	* )
+	* </code>
+	*
+	* All of the following examples are acceptable.
+	*
+	* <usage>
+	*     $DomQuery = new DomQuery;
+	*
+	*     $DomQuery->load('<root><foo>foo</foo></root>');
+	*
+	*     //Print the name of first node of each matched element:
+	*
+	*     $function = '$arguments = func_get_args(); echo $arguments[0][element]->nodeName;';
+	*
+	*     $DomQuery->each($function, 'arg_one', 'arg_two');
+	* </usage>
 	*
 	* The arguments valued 'foo' and 'bar' will be accessed within the lambda function
 	* as '$param1' and '$param2' respectively. This may change in future versions or
@@ -378,20 +547,22 @@ class DomQuery extends DOMDocument implements Countable
    // ! Executor Method
 
    /**
-	* Copies the elements of the last xpath result to all results of $path.
+	* Copies the elements of the last XPath expression to all results of $path.
 	*
-	* @param String $path The destination of the copied elements.
+	* @param String $path_destination The destination of the copied elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @access Public
 	* @return Object
 	*/
-	public function copy($path)
+	public function copy($path_from, $path_to)
 	{
-		foreach($this->page($path, true) as $Destination)
+		foreach($this->path($path_to, true) as $To)
 		{
-			foreach($this->Results as $Result)
+			$this->path($path_from);
+
+			foreach($this->Results as $From)
 			{
-				$Destination->appendChild($Result->cloneNode(true));
+				$To->appendChild($From->cloneNode(true));
 			}
 		}
 
@@ -504,15 +675,18 @@ class DomQuery extends DOMDocument implements Countable
 
 		foreach($this->Results as $Result)
 		{
-			$FirstElement = $this->path('*[1]', true, $Result)->item(0);
+			if($Result->parentNode->nodeName != '#document')
+			{
+				$FirstElement = $this->path('*[1]', true, $Result)->seek(0, true);
 
-			if($FirstElement instanceof DOMElement)
-			{
-				$Result->insertBefore($Element->cloneNode(true), $FirstElement);
-			}
-			else
-			{
-				$Result->parentNode->insertBefore($Element->cloneNode(true), $Result);
+				if($FirstElement instanceof DOMElement)
+				{
+					$Result->insertBefore($Element->cloneNode(true), $FirstElement);
+				}
+				else
+				{
+					$Result->parentNode->insertBefore($Element->cloneNode(true), $Result);
+				}
 			}
 		}
 
@@ -525,26 +699,32 @@ class DomQuery extends DOMDocument implements Countable
    /**
 	* Prepend all of the matched elements to another, specified, set of elements.
 	*
-	* @param String $path The destination path of all matched elements.
+	* @param String $path_to The destination path of all matched elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @access Public
 	* @return Object
 	*/
-	public function prependTo($path)
+	public function prependTo($path_to)
 	{
-		foreach($this->page($path, true) as $Destination)
+		foreach($this->path($path_to, true) as $Destination)
 		{
-			foreach($this->Results as $Result)
+			if($Destination->parentNode->nodeName != '#document')
 			{
-				$FirstElement = $this->path('*[1]', true, $Destination)->item(0);
+				foreach($this->Results as $Result)
+				{
+					if($Result->parentNode->nodeName != '#document')
+					{
+						$FirstElement = $this->path('*[1]', true, $Result)->seek(0, true);
 
-				if($FirstElement instanceof DOMElement)
-				{
-					$Destination->insertBefore($Result->cloneNode(true), $FirstElement);
-				}
-				else
-				{
-					$Destination->parentNode->insertBefore($Result->cloneNode(true), $Destination);
+						if($FirstElement instanceof DOMElement)
+						{
+							$Result->insertBefore($Destination->cloneNode(true), $FirstElement);
+						}
+						else
+						{
+							$Result->parentNode->insertBefore($Destination->cloneNode(true), $Result);
+						}
+					}
 				}
 			}
 		}
@@ -595,7 +775,7 @@ class DomQuery extends DOMDocument implements Countable
 
 		foreach($this->Results as $Result)
 		{
-			if($Result->parentNode->nodeName != '#docment' && $Result->nextSibling)
+			if(false == is_null($Result->parentNode) && ($Result->parentNode->nodeName != '#document' || $Result->nextSibling))
 			{
 				$Result->parentNode->insertBefore($Element->cloneNode(true), $Result->nextSibling);
 			}
@@ -706,16 +886,16 @@ class DomQuery extends DOMDocument implements Countable
 	* also replicate the merging document across all matched elements using
 	* the given XPath expression.
 	*
-	* @param String $source      The XML source document.
-	* @param String $path_origin XPath expression to locate elements to merge.
-	* @param String $path_destination The XML source document
+	* @param String $source     The XML source document.
+	* @param String $path_from  XPath expression to locate elements to merge.
+	* @param String $path_to    XPath expression denoting the location of mergin elements.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @access Public
 	* @return Object
 	*/
-	public function merge($source, $path_origin, $path_destination)
+	public function merge($source, $path_from, $path_to)
 	{
-		$Dom = new parent;
+		$Dom = new parent($this->version, $this->encoding);
 
 		if(false == $Dom->loadXml($source))
 		{
@@ -724,17 +904,17 @@ class DomQuery extends DOMDocument implements Countable
 
 		$XPath = new DOMXPath($Dom);
 
-		foreach($this->path($path_destination, true) as $Destination)
+		foreach($this->path($path_to, true) as $To)
 		{
-			if(false == in_array($Destination->nodeName, array('#text', '#document')))
+			if(false == in_array($To->nodeName, array('#text', '#document')))
 			{
-				foreach($XPath->query($path_origin) as $Origin)
+				foreach($XPath->query($path_from) as $From)
 				{
-					if(false == in_array($Destination->nodeName, array('#text', '#document')))
+					if(false == in_array($To->nodeName, array('#text', '#document')))
 					{
-						$Origin = $this->importNode($Origin, true);
+						$From = $this->importNode($From, true);
 
-						$Destination->appendChild($Origin->cloneNode(true));
+						$To->appendChild($From->cloneNode(true));
 					}
 				}
 			}
@@ -901,17 +1081,23 @@ class XPathResultIterator implements Iterator, ArrayAccess, Countable
    /**
 	* Moves the pointer to the specified index.
 	*
-	* @param Integer $index The new position of the iterator.
+	* @param Integer $index  The new position of the iterator.
+	* @param Integer $return Returns the value of the new position.
 	* @author Daniel Wilhelm II Murdoch <wilhelm.murdoch@gmail.com>
 	* @since Build 1.0.1 Alpha
 	* @access Public
 	* @return Boolean
 	*/
-	public function seek($index)
+	public function seek($index, $return = true)
 	{
 		if($index <= $this->count() && $index >= 0)
 		{
 			$this->position = $index;
+
+			if($return)
+			{
+				return $this->current();
+			}
 
 			return true;
 		}
